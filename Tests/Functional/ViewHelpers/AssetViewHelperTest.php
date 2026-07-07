@@ -205,6 +205,50 @@ final class AssetViewHelperTest extends FunctionalTestCase
                     ],
                 ],
             ],
+            'withModulePreload' => [
+                'template' => '<vite:asset manifest="fileadmin/Fixtures/ImportJs/.vite/manifest.json" entry="Main.js" preloadModules="1" />',
+                'javaScripts' => [
+                    'vite:Main.js' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Main-4483b920.js',
+                        'attributes' => ['type' => 'module'],
+                        'options' => ['priority' => false, 'useNonce' => false, 'external' => true],
+                    ],
+                ],
+                'styleSheets' => [
+                    'vite:Main.js:assets/Main-973bb662.css' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Main-973bb662.css',
+                        'attributes' => [],
+                        'options' => ['priority' => false, 'useNonce' => false, 'external' => true],
+                    ],
+                    'vite:preload:_Shared-To-v4Zbq.js' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Shared-To-v4Zbq.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['priority' => false, 'useNonce' => false, 'external' => true],
+                    ],
+                ],
+            ],
+            'withModulePreloadAndPriority' => [
+                'template' => '<vite:asset manifest="fileadmin/Fixtures/ImportJs/.vite/manifest.json" entry="Main.js" preloadModules="1" priority="1" />',
+                'priorityJavaScripts' => [
+                    'vite:Main.js' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Main-4483b920.js',
+                        'attributes' => ['type' => 'module'],
+                        'options' => ['priority' => true, 'useNonce' => false, 'external' => true],
+                    ],
+                ],
+                'priorityStyleSheets' => [
+                    'vite:Main.js:assets/Main-973bb662.css' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Main-973bb662.css',
+                        'attributes' => [],
+                        'options' => ['priority' => true, 'useNonce' => false, 'external' => true],
+                    ],
+                    'vite:preload:_Shared-To-v4Zbq.js' => [
+                        'source' => self::rawAssetUriPrefix() . $manifestDir . 'ImportJs/assets/Shared-To-v4Zbq.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['priority' => true, 'useNonce' => false, 'external' => true],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -280,6 +324,26 @@ final class AssetViewHelperTest extends FunctionalTestCase
             ],
             $assetCollector->getJavaScripts(false)
         );
+    }
+
+    #[Test]
+    public function renderWithDevServerIgnoresPreloadModules(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('vite_asset_collector', [
+            'useDevServer' => '1',
+            'devServerUri' => 'https://localhost:5173',
+        ]);
+
+        $assetCollector = $this->get(AssetCollector::class);
+
+        $context = $this->createRenderingContext();
+        $context->getTemplatePaths()->setTemplateSource(
+            '<vite:asset manifest="fileadmin/Fixtures/ImportJs/.vite/manifest.json" entry="Main.js" preloadModules="1" />'
+        );
+        (new TemplateView($context))->render();
+
+        self::assertSame([], $assetCollector->getStyleSheets(false));
+        self::assertSame([], $assetCollector->getStyleSheets(true));
     }
 
     #[Test]

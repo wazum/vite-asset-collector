@@ -49,7 +49,11 @@ final class ViteManifest
 
         $imports = [];
         foreach ($this->items[$entrypoint]->imports as $identifier) {
-            $imports[$identifier] = $this->get($identifier);
+            $importedItem = $this->get($identifier);
+            if ($importedItem === null) {
+                continue;
+            }
+            $imports[$identifier] = $importedItem;
             if ($recursive) {
                 $imports = array_merge(
                     $imports,

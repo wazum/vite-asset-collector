@@ -67,10 +67,36 @@ one bundle:
     import "swiper/css"
     import "path/to/Slider.css"
 
-..  _glob-imports:
-
 An entrypoint file is usually a JavaScript or TypeScript file, which then imports other assets. However,
 it is also possible to use other file types as entrypoints, such as StyleSheets or even SVG images.
+
+..  _module-preloading:
+
+Module Preloading
+=================
+
+If your entrypoint imports shared JavaScript chunks (for example due to code
+splitting), browsers discover those chunks only after the entry module has
+been downloaded and parsed, which results in a request waterfall. The
+:html:`preloadModules` argument adds one :html:`<link rel="modulepreload">`
+tag per statically imported chunk, so all chunks are fetched in parallel:
+
+..  code-block:: html
+
+    <vite:asset
+        entry="EXT:sitepackage/Resources/Private/JavaScript/Main.entry.js"
+        preloadModules="1"
+        priority="1"
+    />
+
+Preload tags are only generated in production mode (when assets are embedded
+based on the manifest file) and only for static imports; dynamic imports
+remain lazy. The preload tags always render in the HTML :html:`<head>`; it is
+recommended to combine :html:`preloadModules` with :html:`priority="1"` so
+that the entry script itself is also rendered in the :html:`<head>` and can
+use the preloaded modules immediately.
+
+..  _glob-imports:
 
 Glob Imports
 ============

@@ -188,4 +188,21 @@ final class ViteManifestTest extends UnitTestCase
             (ViteManifest::fromFile($manifestFile))->getImportsForEntrypoint($entrypoint, $recursive)
         );
     }
+
+    #[Test]
+    public function getImportsForEntrypointSkipsMissingImports(): void
+    {
+        // Raw JSON string on purpose: json_encode() returns string|false, which
+        // PHPStan rejects for the string-typed constructor parameter
+        $manifest = new ViteManifest('{
+            "Main.js": {
+                "file": "assets/Main-4483b920.js",
+                "imports": ["_Missing-abcdef.js"],
+                "isEntry": true,
+                "src": "Main.js"
+            }
+        }');
+
+        self::assertSame([], $manifest->getImportsForEntrypoint('Main.js', true));
+    }
 }

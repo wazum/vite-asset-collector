@@ -463,6 +463,123 @@ final class ViteServiceTest extends UnitTestCase
         );
     }
 
+    public static function addAssetsFromManifestWithModulePreloadDataProvider(): array
+    {
+        $fixtureDir = realpath(__DIR__ . '/../../Fixtures') . '/';
+        return [
+            'importedJs' => [
+                'manifestFile' => $fixtureDir . 'ImportJs/.vite/manifest.json',
+                'entry' => 'Main.js',
+                'preloadModules' => true,
+                'styleSheets' => [
+                    'vite:preload:_Shared-To-v4Zbq.js' => [
+                        'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportJs/assets/Shared-To-v4Zbq.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['external' => true],
+                    ],
+                ],
+            ],
+            'preloadDisabled' => [
+                'manifestFile' => $fixtureDir . 'ImportJs/.vite/manifest.json',
+                'entry' => 'Main.js',
+                'preloadModules' => false,
+                'styleSheets' => [],
+            ],
+            'recursiveImports' => [
+                'manifestFile' => $fixtureDir . 'ImportCssRecursive/.vite/manifest.json',
+                'entry' => 'Main.js',
+                'preloadModules' => true,
+                'styleSheets' => [
+                    'vite:preload:_Shared-To-v4Zbq.js' => [
+                        'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportCssRecursive/assets/Shared-To-v4Zbq.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['external' => true],
+                    ],
+                    'vite:preload:_Nested-abcdef.js' => [
+                        'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportCssRecursive/assets/Nested-abcdef.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['external' => true],
+                    ],
+                ],
+            ],
+            'selfReferencedEntry' => [
+                'manifestFile' => $fixtureDir . 'ImportSelfReference/.vite/manifest.json',
+                'entry' => 'Main.js',
+                'preloadModules' => true,
+                'styleSheets' => [
+                    'vite:preload:_Shared-To-v4Zbq.js' => [
+                        'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportSelfReference/assets/Shared-To-v4Zbq.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['external' => true],
+                    ],
+                    'vite:preload:_Nested-abcdef.js' => [
+                        'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportSelfReference/assets/Nested-abcdef.js',
+                        'attributes' => ['rel' => 'modulepreload'],
+                        'options' => ['external' => true],
+                    ],
+                ],
+            ],
+            'cssEntrypoint' => [
+                'manifestFile' => $fixtureDir . 'OnlyCssManifest/.vite/manifest.json',
+                'entry' => 'Main.scss',
+                'preloadModules' => true,
+                'styleSheets' => [],
+            ],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('addAssetsFromManifestWithModulePreloadDataProvider')]
+    public function addAssetsFromManifestWithModulePreload(
+        string $manifestFile,
+        string $entry,
+        bool $preloadModules,
+        array $styleSheets,
+    ): void {
+        $assetCollector = new AssetCollector();
+        $this->createViteService($assetCollector)->addAssetsFromManifest(
+            $manifestFile,
+            $entry,
+            addCss: false,
+            preloadModules: $preloadModules,
+        );
+
+        self::assertEquals($styleSheets, $assetCollector->getStyleSheets(false));
+    }
+
+    #[Test]
+    public function addAssetsFromManifestWithModulePreloadAndCss(): void
+    {
+        $assetCollector = new AssetCollector();
+        $fixtureDir = realpath(__DIR__ . '/../../Fixtures') . '/';
+        $this->createViteService($assetCollector)->addAssetsFromManifest(
+            $fixtureDir . 'ImportJs/.vite/manifest.json',
+            'Main.js',
+            preloadModules: true,
+        );
+
+        self::assertEquals(
+            [
+                'vite:Main.js:assets/Main-973bb662.css' => [
+                    'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportJs/assets/Main-973bb662.css',
+                    'attributes' => [],
+                    'options' => ['external' => true],
+                ],
+                'vite:preload:_Shared-To-v4Zbq.js' => [
+                    'source' => self::rawAssetUriPrefix() . $fixtureDir . 'ImportJs/assets/Shared-To-v4Zbq.js',
+                    'attributes' => ['rel' => 'modulepreload'],
+                    'options' => ['external' => true],
+                ],
+            ],
+            $assetCollector->getStyleSheets(false)
+        );
+        // CSS registers before preload links so stylesheets render first (matches Vite's backend integration guide)
+        self::assertSame(
+            ['vite:Main.js:assets/Main-973bb662.css', 'vite:preload:_Shared-To-v4Zbq.js'],
+            array_keys($assetCollector->getStyleSheets(false))
+        );
+    }
+
     public static function addAssetsFromManifestDeprecatedDataProvider(): array
     {
         $fixtureDir = realpath(__DIR__ . '/../../Fixtures') . '/';

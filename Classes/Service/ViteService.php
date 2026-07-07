@@ -131,6 +131,7 @@ class ViteService
         array $scriptTagAttributes = [],
         array $cssTagAttributes = [],
         bool $inlineCss = false,
+        bool $preloadModules = false,
     ): void {
         $manifestFile = $this->resolveManifestFile($manifestFile);
         $outputDir = $this->determineOutputDirFromManifestFile($manifestFile);
@@ -160,6 +161,10 @@ class ViteService
 
         $entryPoint = $manifest->get($entry);
 
+        $imports = $addCss || $preloadModules
+            ? $manifest->getImportsForEntrypoint($entry, true)
+            : [];
+
         if (!$entryPoint->isCss()) {
             $scriptTagAttributes = $this->prepareScriptAttributes($scriptTagAttributes);
 
@@ -184,7 +189,7 @@ class ViteService
                 );
             }
 
-            foreach ($manifest->getImportsForEntrypoint($entry, true) as $import) {
+            foreach ($imports as $import) {
                 $identifier = md5($import->identifier . '|' . serialize($cssTagAttributes));
                 foreach ($import->css as $file) {
                     $this->addCssAsset(
@@ -204,6 +209,20 @@ class ViteService
                     $cssTagAttributes,
                     $assetOptions,
                     $inlineCss
+                );
+            }
+        }
+
+        if ($preloadModules && !$entryPoint->isCss()) {
+            foreach ($imports as $import) {
+                if ($import->identifier === $entry || $import->isCss()) {
+                    continue;
+                }
+                $this->assetCollector->addStyleSheet(
+                    "vite:preload:{$import->identifier}",
+                    $this->prepareAssetPath($outputDir . $import->file),
+                    ['rel' => 'modulepreload'],
+                    $assetOptions
                 );
             }
         }
